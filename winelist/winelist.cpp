@@ -8,88 +8,62 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <assert.h>
 
 using namespace std;
 
 /*
-Bin,10/2011,Acker,Status,Varietal          ,Producer,Bottling,Region,Vintage,Bottle Price,Category,Format,Distributor,Cost/Case,Cost/BTL,Cost/Gls,Est. $,Est. Glass $,List Glass $,Comments,,
-BTG,6      ,30   ,      ,Cabernet Sauvignon,Chad,    "Lake County, Red Hills",California,2009,,,,Petit Pois,,,,,,,,,
-
-1.I.18.F,1,,,Riesling,F. Haag,Brauneberger Juffer Sonnenuhr Auslese #13 GK Auction 2006 Signed by F. Haag,Mosel,2005,$850,Sweet,1500,,,,,,,,,,
-2.A.1.BMF,3,,,Furmint,Tokaj Classic ,Tokaji Aszu 6 Puttonyos,Hungary,1997,$153,Sweet ,500,,,,,,,,,,
-2.A.10.BM,2,2,,Riesling,Selbach-Oster,Zeltinger Sonnenur Trockenbeerenauslese GK,Mosel,1994,$234,Sweet,375,J. Gilman,255,85,21.25,233.75,58.44,,Acker does not specify GK,,
-2.A.10.F,1,2,,Riesling,Lingenfelder,Freinsheimer Goldberg,Pfaltz,1989,$168,Sweet,375,,,,,,,,,,
-2.A.11.BM,2,5,,Rieslaner,K. Darting,Ungsteiner Bettelhaus Trockenbeerenauslese,Pfalz,1992,$165,Sweet,375,J. Gilman,180,60,15,165,41.25,,,,
-2.A.11.F,1,11,,Riesling,R. Haart,Piesporter Goldtropfchen Auslese EL GK Auction ,Mosel,2009,$140,Sweet,375,,,,,,,,,,
-
-Bin,
-10/2011,
-Acker,
-Status,
-Varietal,
-Producer,
-Bottling,
-Region,
-Vintage,
-Bottle Price,
-Category,
-Format,
-Distributor,Cost/Case,Cost/BTL,Cost/Gls,Est. $,Est. Glass $,List Glass $,Comments,,
-
-1.I.18.F,
-1,
+2.H.FL.1,
+4,
+6,
 ,
+Red,
+375ml,
+2002,
+Pinot Noir,
+Faiveley,
+"Gevrey-Chambertin 1er ""La Combe aux Moines""",
+Burgundy,
 ,
-Riesling,
-F. Haag,
-Brauneberger Juffer Sonnenuhr Auslese #13 GK Auction 2006 Signed by F. Haag,
-Mosel,
-2005,
-$850,
-Sweet,1500,,,,,,,,,,
+$2,,,,,,,,$0
 */
 
-enum { varietal = 4, producer, bottling, region, vintage, price, cat, format };
-const char *fnames[] = { "varietal", "producer", "bottling", "region", "vintage", "price", "cat", "format" };
+enum { cat=4,format,vintage,varietal,producer,bottling,region,blank,price };
+const char *fnames[] = { "cat","format","vintage","varietal","producer","bottling","region","blank","price" };
 
-int grouping[] = { format, cat, region, 0 } ;
+//int grouping[] = { format, cat, region, 0 } ;
+int grouping[] = { cat, varietal, region, 0 } ;
 
 vector<string> last(20);
 
-vector<string> split(string s) {
+vector<string> split(string in) {
     vector<string> v;
-    const char *p = s.c_str();
-    while( 1 ) {
-        const char *q = strchr(p, ',');
-        if( q == 0 ) {
-            // we don't bother with the last one
-            break;
-        }
-        string quoted;
-        while( *p == '"' ) {
-            // unquote
-            const char *end = strchr(p+1,'"');
-            if( end ) { 
-                quoted += string(p,end);
-                p = end+1;
-                if( *p != ',' ) { 
-                    return v;
-                }
-                p++;
-                q = strchr(p, ',');
-            }
-            else {
-                break;
+    const char *p = in.c_str();
+    int state = 0;
+    const char *s = p;
+    while( *p ) {
+        if( state > 0 ) {
+            if( *p == '"' ) { 
+                state--;
             }
         }
-        if( quoted.empty() ) {
-            string s = string(p, q);
-            v.push_back(s); 
+        else { 
+            if( *p == '"' && 
+                p == s /* not handling double quote escaping yet */
+                ) { 
+                assert( p == s );
+                s++;
+                state++;
+            }
+            else if( *p == ',' ) {
+                string str(s, p);
+                if( !str.empty() && str.back() == '"' )
+                    str.pop_back();
+                v.push_back(str);
+                s = p+1;
+            }
         }
-        else {
-            v.push_back(s);
-        }
-        p = q + 1; 
+        p++;
     }
     return v;
 }
@@ -99,16 +73,67 @@ struct wine {
     vector<string> fields;
     wine(string s) : raw(s) {
         fields = split(s);
+        static int n;
+        if( n++ == 0 ) {
+#if 0
+            int q = 0;
+            vector<string>& v = fields;
+            cout << "FIRST" << endl;
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << v[q++] << '\n';
+            cout << "FIRST\n";
+            cout << f(format) << '\n';
+            cout << f(cat) << '\n';
+            cout << f(region) << endl;
+#endif
+
+            // data check: 
+            if( f(format) != "Format"  ||
+                f(region) != "Region" ) { 
+                    cout << "error header row doesn't look right.\n" << endl;
+                    cout << raw << endl;
+                    exit(1);
+            }
+        }
     }
 
     string f(int x) const { 
-        return (unsigned) x < fields.size() ? fields[x] : "";
+        string s = (unsigned) x < fields.size() ? fields[x] : "";
+        if( s == "375" || s == "375ml" )
+            return "Half bottle";
+        if( s == "1500" )
+            return "Magnum";
+        return s;
+    }
+    bool weirdFormat(string s) const { 
+        return s != "750" && s != "750ml" && 
+            s != "Half bottles" && 
+            s != "Magnum" && 
+            s != "";
+    }
+    string fnorm(int x) const {
+        string s = f(x);
+        if( x == format && weirdFormat(s) ) { 
+            return "";
+        }
+        return s;
     }
     bool operator<(const wine& rhs) const { 
         int *g = grouping;
         while( *g ) { 
-            string a = f(*g);
-            string b = rhs.f(*g);
+            string a = fnorm(*g);
+            string b = rhs.fnorm(*g);
             if( a < b ) 
                 return true;
             if( a > b )
@@ -120,8 +145,8 @@ struct wine {
     bool operator==(const wine& rhs) const { 
         int *g = grouping;
         while( *g ) { 
-            string a = f(*g);
-            string b = rhs.f(*g);
+            string a = fnorm(*g);
+            string b = rhs.fnorm(*g);
             if( a != b ) 
                 return false;
             ++g;
@@ -131,7 +156,12 @@ struct wine {
     //void operator=(const wine& rhs) { fields = rhs.fields; }
     string str() { 
         stringstream ss;
-        ss << f(vintage) << ' ' << f(producer) << ' ' << f(bottling) << ' ' << f(price);
+        ss << f(vintage) << ' ' << f(producer) << ' ' << f(bottling);
+        string fmt = f(format);
+        if( weirdFormat(fmt) ) { 
+            ss << " (" << fmt << ")";
+        }
+        ss <<" \t" << f(price);
         return ss.str();
     }
     string formatted();
@@ -164,9 +194,12 @@ string wine::formatted() {
         i++;
     }
     if( newcat ) out << '\n';
-    out << "<div class=\"lineitem\">";
-    out << str();
-    out << "</div>";
+    string s = str();
+    if( !s.empty() ) {
+        out << "<div class=\"lineitem\">";
+        out << str();
+        out << "</div>\n";
+    }
     return out.str();
 }
 
@@ -177,9 +210,9 @@ void outputFormatted() {
 //        "<link rel=\"stylesheet\" href=\"winelist.css\" />"
         "</head><body>\n";
     for( vector<wine>::iterator i = wines.begin(); i != wines.end(); i++ ) {        
-        cout << i->formatted() << endl;
+        cout << i->formatted();
     }
-    cout << "</body></html>\n";
+    cout << "</body></html>\n" << endl;
 }
 
 void output() {
@@ -196,15 +229,25 @@ void run() {
     outputFormatted();
 }
 
+
+void debug(string s) { 
+    cout << s << endl;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
     ifstream f("winelist.csv");
-
+    int i = 0;
     while( f ) { 
         string x;
         getline(f, x);
+        if( 0 && strstr(x.c_str(), "Saluce") ){ 
+            debug(x);
+        }
         //        cout << x << endl;
-        wines.push_back( wine(x) );
+        wine w = wine(x);
+        if( i++ > 0 ) // skip header
+            wines.push_back(w);
     }
     run();
     cout << "fin" << endl;
