@@ -1,7 +1,7 @@
 // winelist.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -57,8 +57,11 @@ vector<string> split(string in) {
             }
             else if( *p == ',' ) {
                 string str(s, p);
-                if( !str.empty() && str.back() == '"' )
-                    str.pop_back();
+                if( !str.empty() && str[ str.size()-1 ] == '"' ) {
+				  // remove trailing quote
+				  //str.pop_back();
+				  str = string(str, 0, str.size()-1);
+				}
                 v.push_back(str);
                 s = p+1;
             }
@@ -234,7 +237,7 @@ void debug(string s) {
     cout << s << endl;
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char* argv[])
 {
     ifstream f("winelist.csv");
     int i = 0;
