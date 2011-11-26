@@ -118,8 +118,8 @@ struct wine {
     }
     bool weirdFormat(string s) const { 
         return s != "750" && s != "750ml" && 
-            s != "Half bottles" && 
-            s != "Magnum" && 
+/*            s != "Half bottles" && 
+            s != "Magnum" &&  */
             s != "";
     }
     string fnorm(int x) const {
@@ -156,12 +156,12 @@ struct wine {
     //void operator=(const wine& rhs) { fields = rhs.fields; }
     string str() { 
         stringstream ss;
-        ss << f(vintage) << ' ' << f(producer) << ' ' << f(bottling);
+        ss << f(producer) << ' ' << f(bottling) << ' ' << f(vintage);
         string fmt = f(format);
         if( weirdFormat(fmt) ) { 
             ss << " (" << fmt << ")";
         }
-        ss <<" \t" << f(price);
+        ss <<"_TAB_" << f(price);
         return ss.str();
     }
     string formatted();
@@ -196,9 +196,9 @@ string wine::formatted() {
     if( newcat ) out << '\n';
     string s = str();
     if( !s.empty() ) {
-        out << "<div class=\"lineitem\">";
+        out << "<h4>"; //div class=\"lineitem\">";
         out << str();
-        out << "</div>\n";
+        out << "</h4>\n";
     }
     return out.str();
 }
