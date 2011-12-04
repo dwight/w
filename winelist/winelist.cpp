@@ -12,36 +12,25 @@
 
 using namespace std;
 
-/*
-2.H.FL.1,
-4,
-6,
-,
-Red,
-375ml,
-2002,
-Pinot Noir,
-Faiveley,
-"Gevrey-Chambertin 1er ""La Combe aux Moines""",
-Burgundy,
-,
-$2,,,,,,,,$0
-*/
-
-enum { cat=4,format,vintage,varietal,producer,bottling,region,blank,price };
+enum { cat=4,format,vintage,varietal,producer,bottling,region,blank,
+    price=11,
+    Group1=22,
+    Desc=Group1+5
+};
 const char *fnames[] = { "cat","format","vintage","varietal","producer","bottling","region","blank","price" };
 
-//int grouping[] = { format, cat, region, 0 } ;
-int grouping[] = { cat, varietal, region, 0 } ;
-
-vector<string> last(20);
+vector<string> last(40);
 
 vector<string> split(string in) {
     vector<string> v;
     const char *p = in.c_str();
     int state = 0;
     const char *s = p;
-    while( *p ) {
+    while( 1 ) {
+        if( *p == 0 ) { 
+            v.push_back(s);
+            break;
+        }
         if( state > 0 ) {
             if( *p == '"' ) { 
                 state--;
@@ -112,11 +101,13 @@ struct wine {
     }
 
     string f(int x) const { 
+        //cout << x << ' ' << fields.size() << endl;
+
         string s = (unsigned) x < fields.size() ? fields[x] : "";
-        if( s == "375" || s == "375ml" )
+        /*if( s == "375" || s == "375ml" )
             return "Half bottle";
         if( s == "1500" )
-            return "Magnum";
+            return "Magnum";*/
         return s;
     }
     bool weirdFormat(string s) const { 
@@ -127,44 +118,45 @@ struct wine {
     }
     string fnorm(int x) const {
         string s = f(x);
+        /*
         if( x == format && weirdFormat(s) ) { 
             return "";
-        }
+        }*/
         return s;
     }
     bool operator<(const wine& rhs) const { 
-        int *g = grouping;
-        while( *g ) { 
-            string a = fnorm(*g);
-            string b = rhs.fnorm(*g);
+        for( int i = 0; i < 5; i++ ) {
+            int column = Group1+i;
+            string a = fnorm(column);
+            string b = rhs.fnorm(column);
             if( a < b ) 
                 return true;
             if( a > b )
                 return false;
-            ++g;
         }
         return false;
     }
     bool operator==(const wine& rhs) const { 
-        int *g = grouping;
-        while( *g ) { 
-            string a = fnorm(*g);
-            string b = rhs.fnorm(*g);
+        for( int i = 0; i < 5; i++ ) {
+            int column = Group1+i;
+            string a = fnorm(column);
+            string b = rhs.fnorm(column);
             if( a != b ) 
                 return false;
-            ++g;
         }
         return true;
     }
     //void operator=(const wine& rhs) { fields = rhs.fields; }
     string str() { 
         stringstream ss;
-        ss << f(producer) << ' ' << f(bottling) << ' ' << f(vintage);
-        string fmt = f(format);
-        if( weirdFormat(fmt) ) { 
-            ss << " (" << fmt << ")";
-        }
-        ss <<"_TAB_" << f(price);
+        string d = f(Desc);
+        const char *desc = d.c_str();
+        ss << d << "   ";
+        string p = f(price);
+        if( p.empty() )
+            ss << "$0";
+        else
+            ss << p;
         return ss.str();
     }
     string formatted();
@@ -178,30 +170,41 @@ string newcategory(string s, int x) {
 }
 
 string wine::formatted() {
-    int *g = grouping;
     bool newcat = false;
     stringstream out;
     // DEBUG:
     //    cout << raw << "<br>" << endl;
-    int i = 1;
-    while( *g ) { 
-        int x = *g++;
+
+    static int z;
+    if(0&& ++z < 10 ) {
+        cout << "g1=" << f(Group1) << endl;
+        cout << f(price-1) << endl;
+        cout << "p:" << f(price) << endl;
+        cout << f(price+1) << endl;
+    }
+
+    int level = 0;
+    for( int i = 0; i < 5; i++ ) {
+        int x = i+Group1;
         string q = f(x);
         if( f(x).empty() )
-            return "";
+            continue;
+        level++;
         if( newcat || f(x) != last[x] ) { 
+            if( level == 1 ) { 
+                out << "\n\n<!-- g1=" << f(Group1) << " g2=" << f(Group1+1) << " g3=" << f(Group1+2) << "-->\n";
+            }
             last[x] = f(x);
             newcat = true;
-            out << newcategory(f(x), i);
+            out << newcategory(f(x), level);
         }
-        i++;
     }
     if( newcat ) out << '\n';
     string s = str();
     if( !s.empty() ) {
-        out << "<h4>"; //div class=\"lineitem\">";
+        out << "<h6>"; //div class=\"lineitem\">";
         out << str();
-        out << "</h4>\n";
+        out << "</h6>\n";
     }
     return out.str();
 }
@@ -228,7 +231,8 @@ void output() {
 
 void run() { 
     //output();
-    sort(wines.begin(), wines.end());
+
+    //    sort(wines.begin(), wines.end());
     outputFormatted();
 }
 
@@ -247,7 +251,7 @@ int main(int argc, char* argv[])
         if( 0 && strstr(x.c_str(), "Saluce") ){ 
             debug(x);
         }
-        //        cout << x << endl;
+                //cout << x << endl;
         wine w = wine(x);
         if( i++ > 0 ) // skip header
             wines.push_back(w);
