@@ -14,6 +14,7 @@ using namespace std;
 
 enum { cat=4,format,vintage,varietal,producer,bottling,region,blank,
     price=11,
+	   glassprice=12,
     Group1=22,
     Desc=Group1+5
 };
@@ -153,6 +154,8 @@ struct wine {
         const char *desc = d.c_str();
         ss << d << "   ";
         string p = f(price);
+		if( p.empty() ) 
+		  p = f(glassprice); // temp; this is not what we want
         if( p.empty() )
             ss << "$0";
         else
