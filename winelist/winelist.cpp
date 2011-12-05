@@ -99,19 +99,22 @@ struct wine {
         return s;
     }
     bool operator<(const wine& rhs) const { 
+        string a,b;
         for( int i = 0; i < 5; i++ ) {
             int column = Group1+i;
-            string a = fnorm(column);
-            string b = rhs.fnorm(column);
+            a = fnorm(column);
+            b = rhs.fnorm(column);
 			//			cout << a << " < " << b << endl;
 			//            if( a < b ) {
 			//cout << "  true" << endl;
 			//                return true;
 			//			}
-            if( a > b )
+            if( a < b ) 
+                return true;
+            if( a != b ) 
                 return false;
         }
-        return false;
+        return a < b;
     }
     bool operator==(const wine& rhs) const { 
         for( int i = 0; i < 5; i++ ) {
@@ -126,7 +129,7 @@ struct wine {
     bool btg() { 
       return !f(glassprice).empty();
     }  
-    //void operator=(const wine& rhs) { fields = rhs.fields; }
+    void operator=(const wine& rhs) { fields = rhs.fields; }
     string str() { 
         stringstream ss;
         string d = f(Desc);
@@ -149,11 +152,10 @@ string newcategory(string s, int x) {
     stringstream ss;
     ss << '\n';
 	const char *p = s.c_str();
-	/*
+    ss << "<!--" << p << "-->\n";
 	if( *p && p[1] == '.' ) { 
 	  p += 2;
 	}
-	*/
     ss << "<h" << x << ">" << p << "</h" << x << ">\n";
     return ss.str();
 }
@@ -191,10 +193,11 @@ string wine::formatted() {
     }
     if( newcat ) out << '\n';
     string s = str();
-    if( !s.empty() ) {
+    if( !s.empty() ) {    
         out << "<h6>"; //div class=\"lineitem\">";
         out << str();
         out << "</h6>\n";
+    //    out << "  " << f(Group1) << " g2=" << f(Group1+1) << " g3=" << f(Group1+2) << ' ' << '\n';
     }
     return out.str();
 }
@@ -215,7 +218,7 @@ void output() {
     for( vector<wine>::iterator i = wines.begin(); i != wines.end(); i++ ) {        
      //   cout << "raw:" << i->raw << endl;
         string s = i->str();
-        cout << s << endl;
+        cout << i->f(Group1) << ' ' << s << endl;
     }
 }
 
@@ -223,6 +226,8 @@ void run() {
     //output();
 
     sort(wines.begin(), wines.end());
+    //output();
+    //exit(1);
     outputFormatted();
 }
 
@@ -236,8 +241,9 @@ int main(int argc, char* argv[])
     ifstream f("winelist.csv");
     int i = 0;
     while( f ) { 
-	  if( ++i == 100 ) 
-		break;
+        //if( ++i == 100 ) 
+        //    break;
+
         string x;
         getline(f, x);
         wine w = wine(x);
@@ -246,8 +252,15 @@ int main(int argc, char* argv[])
 		  if( w.btg() ) { 
 			if( w.fields.size() > Group1 ) { 
 			  w.fields[Group1] = "0.By the Glass";
+              wines.push_back(w);
+              wine b = w;
+			  b.fields[Group1] = "";
+              b.fields[glassprice].clear();
+              wines.push_back(b);
 			}
-			wines.push_back(w);
+            else { 
+                cout << "bad line in input? " << endl;
+            }
 			/*zzz
 			wine b = w;
 			w.fields[Group1] = "\011.By the Glass";
